@@ -1,0 +1,92 @@
+services:
+  reverse-proxy:
+    image: traefik:v2.5
+    container_name: apv-rp
+    restart: on-failure
+    security_opt:
+      - no-new-privileges:true
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      # Map the static configuration into the container
+      - ./traefik/static.yml:/etc/traefik/traefik.yml:ro
+      # Map the dynamic configuration into the container
+      - ./traefik/dynamic.yml:/etc/traefik/dynamic.yml:ro
+      # Map the certificate into the container
+      - ./letsencrypt:/letsencrypt
+    command:
+      - "--accesslog=true"
+    labels:
+      - "traefik.enable=true"
+      - "traefik.scheme=https"
+      - "traefik.http.serverstransports.apv.servername=duytrn.com"
+      - "traefik.http.serverstransports.apv.insecureskipverify=true"
+      - "traefik.http.services.apv-rp.loadbalancer.server.port=443"
+      - "traefik.http.services.apv-rp.loadbalancer.server.scheme=https"
+      - "traefik.http.services.apv-rp.loadbalancer.serverstransport=apv"
+      - "traefik.http.routers.apv.tls=false"
+      - "traefik.http.routers.apv.rule=host(`duytrn.com`) || HostRegexp(`{subdomain:[a-z0-9-]+}.duytrn.com`)"
+      - "traefik.http.routers.apv.entrypoints=https"
+      - "traefik.http.routers.apv.service=apv-rp"
+      - "traefik.http.services.apv-rp-priv.loadbalancer.server.port=9443"
+      - "traefik.http.services.apv-rp-priv.loadbalancer.server.scheme=https"
+      - "traefik.http.services.apv-rp-priv.loadbalancer.serverstransport=apv"
+      - "traefik.http.routers.apv-rp-priv.tls=true"
+      - "traefik.http.routers.apv-rp-priv.rule=host(`duytrn.com`) || HostRegexp(`{subdomain:[a-z0-9-]+}.duytrn.com`)"
+      - "traefik.http.routers.apv-rp-priv.entrypoints=private"
+      - "traefik.http.routers.apv-rp-priv.service=apv-rp-priv"
+      - "traefik.docker.network=apv_public"
+      - "rp-target=main-lb"
+    networks:
+      - apv_public
+      - apv_services
+
+  app_11:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    restart: on-failure
+    labels:
+      - 'rp-target=apv-lb'
+      - 'traefik.enable=true'
+      - 'traefik.scheme=https'
+      - 'traefik.http.services.app_11.loadbalancer.server.port=80'
+      - 'traefik.http.routers.app_11.tls=false'
+      - 'traefik.http.routers.app_11.rule=host(`app_11.duytrn.com`) && !PathPrefix(`/docs`)'
+      - 'traefik.http.routers.app_11.entrypoints=https'
+      - 'traefik.http.routers.app_11-priv.tls=true'
+      - 'traefik.http.routers.app_11-priv.rule=host(`app_11.duytrn.com`) && (PathPrefix(`/docs`) || Path(`/openapi.json`))'
+      - 'traefik.http.routers.app_11-priv.entrypoints=https'
+    networks:
+      - apv_services
+      - apv_public
+
+  app_12:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    restart: on-failure
+    labels:
+      - 'rp-target=apv-lb'
+      - 'traefik.enable=true'
+      - 'traefik.scheme=https'
+      - 'traefik.http.services.app_12.loadbalancer.server.port=80'
+      - 'traefik.http.routers.app_12.tls=false'
+      - 'traefik.http.routers.app_12.rule=host(`app_12.duytrn.com`) && !PathPrefix(`/docs`)'
+      - 'traefik.http.routers.app_12.entrypoints=https'
+      - 'traefik.http.routers.app_12-priv.tls=true'
+      - 'traefik.http.routers.app_12-priv.rule=host(`app_12.duytrn.com`) && (PathPrefix(`/docs`) || Path(`/openapi.json`))'
+      - 'traefik.http.routers.app_12-priv.entrypoints=https'
+    networks:
+      - apv_services
+      - apv_public
+
+networks:
+  apv_public:
+    external: true
+  apv_services:
+    ipam:
+      driver: default
+      config:
+        - subnet: 10.0.102.64/27
+  mainlb_priv :
+    external: true
