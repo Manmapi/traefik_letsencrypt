@@ -77,16 +77,11 @@ services:
       - 'traefik.http.routers.app_12-priv.rule=host(`app_12.duytrn.com`) && (PathPrefix(`/docs`) || Path(`/openapi.json`))'
       - 'traefik.http.routers.app_12-priv.entrypoints=https'
     networks:
-      - apv_services
       - apv_public
 
 networks:
   apv_public:
     external: true
-  apv_services:
-    ipam:
-      driver: default
-      config:
-        - subnet: 10.0.102.64/27
+
   mainlb_priv :
     external: true
