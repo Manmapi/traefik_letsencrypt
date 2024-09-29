@@ -4,4 +4,4 @@ http:
       rule: "Host(`traefik.lb.duytrn.com`)"
       entrypoints:
         - https
-      service: "api@intenal"
+      service: "api@internal"
