@@ -38,7 +38,6 @@ services:
       - "rp-target=main-lb"
     networks:
       - apv_public
-      - apv_services
 
   app_11:
     build:
@@ -57,7 +56,6 @@ services:
       - 'traefik.http.routers.app_11-priv.rule=host(`app_11.duytrn.com`) && (PathPrefix(`/docs`) || Path(`/openapi.json`))'
       - 'traefik.http.routers.app_11-priv.entrypoints=https'
     networks:
-      - apv_services
       - apv_public
 
   app_12:
